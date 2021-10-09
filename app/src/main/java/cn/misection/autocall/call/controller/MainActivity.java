@@ -18,6 +18,10 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.databinding.DataBindingUtil;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import cn.misection.autocall.R;
 import cn.misection.autocall.databinding.ActivityMainBinding;
 
@@ -30,9 +34,15 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding mBinding;
 
-    private PhoneStateListener phoneStateListener;
+    private PhoneStateListener mPhoneStateListener;
 
-    private TelephonyManager telephonyManager;
+    private TelephonyManager mTelephonyManager;
+
+    private long mPeriod = 10;
+
+    private long mNextCallCountDown = 1;
+
+    private ScheduledExecutorService mMakePhoneCallThreadPool = Executors.newSingleThreadScheduledExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,8 +70,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initActionListener() {
-        telephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
-        phoneStateListener = new PhoneStateListener() {
+        mTelephonyManager = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        mPhoneStateListener = new PhoneStateListener() {
             @Override
             public void onCallStateChanged(int state, String phoneNumber) {
                 super.onCallStateChanged(state, phoneNumber);
@@ -87,45 +97,59 @@ public class MainActivity extends AppCompatActivity {
             }
         };
         //监听电话通话状态的改变
-        telephonyManager.listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+        mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
     }
 
     public void onCallButtonClicked(View view) {
         // 检查是否获得了权限（Android6.0运行时权限）
-        if (ContextCompat.checkSelfPermission(MainActivity.this,
-                Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
-            // 没有获得授权，申请授权
-            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
-                    Manifest.permission.CALL_PHONE)) {
-                // 返回值：
-                //如果app之前请求过该权限,被用户拒绝, 这个方法就会返回true.
-                //如果用户之前拒绝权限的时候勾选了对话框中”Don’t ask again”的选项,那么这个方法会返回false.
-                //如果设备策略禁止应用拥有这条权限, 这个方法也返回false.
-                // 弹窗需要解释为何需要该权限，再次请求授权
-                Toast.makeText(MainActivity.this, "请授权！", Toast.LENGTH_LONG).show();
-                // 帮跳转到该应用的设置界面，让用户手动授权
-                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                Uri uri = Uri.fromParts("package", getPackageName(), null);
-                intent.setData(uri);
-                startActivity(intent);
-            } else {
-                // 不需要解释为何需要该权限，直接请求授权
-                ActivityCompat.requestPermissions(MainActivity.this,
-                        new String[]{Manifest.permission.CALL_PHONE},
-                        1);
-            }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE)
+                != PackageManager.PERMISSION_GRANTED) {
+            applyPermission();
         } else {
             //拨打电话
             Intent intent = new Intent(Intent.ACTION_CALL);
-            String phone = String.valueOf(mBinding.phoneCallStateTextView.getText());
-            Log.d(TAG, "即将拨打的电话信息" + phone);
-            Uri data = Uri.parse("tel:" + phone);
+            String phoneNum = String.valueOf(mBinding.phoneCallStateTextView.getText());
+            Log.d(TAG, "即将拨打的电话信息" + phoneNum);
+            Uri data = Uri.parse("tel:" + phoneNum);
             intent.setData(data);
+            mMakePhoneCallThreadPool.scheduleAtFixedRate(
+                    () -> startActivity(intent),
+                    mNextCallCountDown,
+                    mPeriod,
+                    TimeUnit.SECONDS
+            );
+        }
+    }
+
+    private void applyPermission() {
+        // 没有获得授权，申请授权
+        if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                Manifest.permission.CALL_PHONE)) {
+            // 返回值：
+            //如果app之前请求过该权限,被用户拒绝, 这个方法就会返回true.
+            //如果用户之前拒绝权限的时候勾选了对话框中”Don’t ask again”的选项,那么这个方法会返回false.
+            //如果设备策略禁止应用拥有这条权限, 这个方法也返回false.
+            // 弹窗需要解释为何需要该权限，再次请求授权
+            Toast.makeText(MainActivity.this, "请授权！", Toast.LENGTH_LONG).show();
+            // 帮跳转到该应用的设置界面，让用户手动授权
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            Uri uri = Uri.fromParts("package", getPackageName(), null);
+            intent.setData(uri);
             startActivity(intent);
+        } else {
+            // 不需要解释为何需要该权限，直接请求授权
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.CALL_PHONE},
+                    1);
         }
     }
 
     public void onInternalButtonClick(View view) {
 
+    }
+
+
+    public void onCancelCallButtonClicked(View view) {
+        mMakePhoneCallThreadPool.shutdown();
     }
 }
