@@ -31,7 +31,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:gravity="center"
-                        android:text="通话状态: 未在通话" />
+                        android:text="通话状态: 未在通话"
+                        android:textSize="18sp" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 
@@ -45,7 +46,8 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:gravity="center"
-                        android:text="倒计时: 10s" />
+                        android:text="倒计时: 10s"
+                        android:textSize="25sp" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 
@@ -60,7 +62,8 @@
                         android:layout_height="match_parent"
                         android:layout_weight="0.3"
                         android:gravity="center_vertical"
-                        android:text="输入电话号码" />
+                        android:text="输入电话号码"
+                        android:textSize="18sp" />
 
                 <com.xuexiang.xui.widget.edittext.ClearEditText
                         android:id="@+id/telphone_num_edit_text"
@@ -68,7 +71,8 @@
                         android:layout_height="match_parent"
                         android:layout_weight="0.7"
                         android:hint="电话号码"
-                        android:inputType="number" />
+                        android:inputType="number"
+                        android:textSize="18sp" />
 
             </androidx.appcompat.widget.LinearLayoutCompat>
 
@@ -82,14 +86,16 @@
                         android:layout_height="match_parent"
                         android:layout_weight="0.3"
                         android:gravity="center_vertical"
-                        android:text="拨打时间间隔(单位: 秒)" />
+                        android:text="拨打时间间隔(单位: 秒)"
+                        android:textSize="15sp" />
 
                 <com.xuexiang.xui.widget.edittext.ClearEditText
-                        android:id="@+id/internal_edit_text"
+                        android:id="@+id/period_edit_text"
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="0.35"
-                        android:inputType="number" />
+                        android:inputType="number"
+                        android:textSize="18sp" />
 
                 <androidx.appcompat.widget.AppCompatButton
                         android:layout_width="0dp"
