@@ -7,12 +7,12 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.provider.Settings;
 import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.View;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -40,9 +40,11 @@ public class MainActivity extends AppCompatActivity {
 
     private TelephonyManager mTelephonyManager;
 
-    private ScheduledExecutorService mMakePhoneCallThreadPool = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService mMakePhoneCallThreadPool;
 
     private SharedPreferences mPreferences;
+
+//    private CountDownTimer mCountDownTimer;
 
     private long mPeriod = 10;
 
@@ -81,6 +83,17 @@ public class MainActivity extends AppCompatActivity {
 
     private void initController() {
         mPreferences = getPreferences(MODE_PRIVATE);
+//        mCountDownTimer = new CountDownTimer(mPeriod * 1000, 1000) {
+//            @Override
+//            public void onTick(long millisUntilFinished) {
+//                mBinding.countdownTextView.setText(String.format("倒计时 %d 秒", millisUntilFinished / 1000));
+//            }
+//
+//            @Override
+//            public void onFinish() {
+//
+//            }
+//        };
     }
 
     private void initState() {
@@ -117,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         };
-        //监听电话通话状态的改变
+        // 监听电话通话状态的改变
         mTelephonyManager.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
     }
 
@@ -128,18 +141,8 @@ public class MainActivity extends AppCompatActivity {
                 != PackageManager.PERMISSION_GRANTED) {
             applyPermission();
         } else {
-            //拨打电话
-            Intent intent = new Intent(Intent.ACTION_CALL);
-            String phoneNum = String.valueOf(mBinding.telphoneNumEditText.getText()).trim();
-            Log.d(TAG, "即将拨打的电话信息" + phoneNum);
-            Uri data = Uri.parse("tel:" + phoneNum);
-            intent.setData(data);
-            mMakePhoneCallThreadPool.scheduleAtFixedRate(
-                    () -> startActivity(intent),
-                    mNextCallCountDown,
-                    mPeriod,
-                    TimeUnit.SECONDS
-            );
+            // 拨打电话
+            startMakePhoneCallLoop(String.valueOf(mBinding.telphoneNumEditText.getText()).trim());
         }
     }
 
@@ -151,7 +154,7 @@ public class MainActivity extends AppCompatActivity {
             // 如果用户之前拒绝权限的时候勾选了对话框中”Don’t ask again”的选项,那么这个方法会返回false.
             // 如果设备策略禁止应用拥有这条权限, 这个方法也返回false.
             // 弹窗需要解释为何需要该权限，再次请求授权
-            Toast.makeText(this, "请授权！", Toast.LENGTH_LONG).show();
+            AppSystem.out.printt(this, "请授权!");
             // 帮跳转到该应用的设置界面，让用户手动授权
             Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
             Uri uri = Uri.fromParts("package", getPackageName(), null);
@@ -167,10 +170,13 @@ public class MainActivity extends AppCompatActivity {
 
     public void onInternalButtonClick(View view) {
         savePeriod();
+        startMakePhoneCallLoop(String.valueOf(mBinding.telphoneNumEditText.getText()).trim());
     }
 
     public void onCancelCallButtonClicked(View view) {
-        mMakePhoneCallThreadPool.shutdown();
+        if (mMakePhoneCallThreadPool != null) {
+            mMakePhoneCallThreadPool.shutdown();
+        }
         AppSystem.out.printt(this, "暂停拨号成功");
     }
 
@@ -186,5 +192,18 @@ public class MainActivity extends AppCompatActivity {
                 .putLong("period", Long.parseLong(String.valueOf(mBinding.periodEditText.getText()).trim()))
                 .apply();
         AppSystem.out.printt(this, "间隔时间保存成功");
+    }
+
+    private void startMakePhoneCallLoop(String phoneNum) {
+        Log.e(TAG, "即将拨打的电话信息" + phoneNum);
+        mMakePhoneCallThreadPool = Executors.newSingleThreadScheduledExecutor();
+        Intent intent = new Intent(Intent.ACTION_CALL);
+        intent.setData(Uri.parse("tel:" + phoneNum));
+        mMakePhoneCallThreadPool.scheduleAtFixedRate(
+                () -> startActivity(intent),
+                mNextCallCountDown,
+                mPeriod,
+                TimeUnit.SECONDS
+        );
     }
 }
